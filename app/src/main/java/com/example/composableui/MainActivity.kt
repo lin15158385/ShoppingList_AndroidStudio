@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.composableui.data.sampleArticles
 import com.example.composableui.model.Article
+import com.example.composableui.model.ManagedArticleList
 import com.example.composableui.ui.screens.ArticleListScreen
 import com.example.composableui.ui.screens.CScreen
 import com.example.composableui.ui.screens.CartScreen
@@ -28,6 +30,7 @@ import com.example.composableui.ui.state.UiState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.example.composableui.ui.screens.ListEditorScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -69,25 +72,53 @@ class MainActivity : ComponentActivity() {
                 mutableStateOf<UiState>(UiState.Empty)
             }
 
+            // novo
+            var showListEditor by remember {
+                mutableStateOf(false)
+            }
+
+            var showManageLists by remember {
+                mutableStateOf(false)
+            }
+
+            var selectedListId by remember {
+                mutableIntStateOf(1)
+            }
+
+            var articleLists by remember {
+                mutableStateOf(
+                    listOf(
+                        ManagedArticleList(
+                            id = 1,
+                            name = "Lista 1",
+                            articles = sampleArticles
+                        )
+                    )
+                )
+            }
+
             // Carregar os artigos sempre que abre a lista
             // ou quando o utilizador tenta novamente.
-            LaunchedEffect(showArticles, reloadKey) {
-
+            LaunchedEffect(
+                showArticles,
+                reloadKey,
+                selectedListId,
+                articleLists
+            ) {
                 if (showArticles) {
-
                     uiState = UiState.Loading
 
                     try {
-                        val articles = withContext(Dispatchers.IO) {
-                            sampleArticles
-                        }
+                        val articles = articleLists
+                            .firstOrNull { it.id == selectedListId }
+                            ?.articles
+                            .orEmpty()
 
                         uiState = if (articles.isEmpty()) {
                             UiState.Empty
                         } else {
                             UiState.Success(articles)
                         }
-
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -111,6 +142,105 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
+                // novo
+
+                showManageLists -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text("Gerir artigos")
+
+                        articleLists.forEach { list ->
+                            Text("${list.name} (ID: ${list.id})")
+
+                            Button(
+                                onClick = {
+                                    selectedListId = list.id
+                                    showManageLists = false
+                                    showListEditor = true
+                                }
+                            ) {
+                                Text("Abrir lista")
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                showManageLists = false
+                            }
+                        ) {
+                            Text("Voltar ao menu")
+                        }
+                    }
+                }
+
+
+                showListEditor -> {
+                    val currentList = articleLists
+                        .firstOrNull { it.id == selectedListId }
+
+                    if (currentList != null) {
+                        ListEditorScreen(
+                            articleList = currentList,
+
+                            onBack = {
+                                showListEditor = false
+                                showManageLists = true
+                            },
+
+                            onAddArticle = { article ->
+                                articleLists = articleLists.map { list ->
+                                    if (list.id == selectedListId) {
+                                        list.copy(
+                                            articles = list.articles + article
+                                        )
+                                    } else {
+                                        list
+                                    }
+                                }
+                            },
+
+                            onUpdateArticle = { updatedArticle ->
+                                articleLists = articleLists.map { list ->
+                                    if (list.id == selectedListId) {
+                                        list.copy(
+                                            articles = list.articles.map { article ->
+                                                if (article.id == updatedArticle.id) {
+                                                    updatedArticle
+                                                } else {
+                                                    article
+                                                }
+                                            }
+                                        )
+                                    } else {
+                                        list
+                                    }
+                                }
+                            },
+
+
+                            onDeleteArticle = { articleToDelete ->
+                                articleLists = articleLists.map { list ->
+                                    if (list.id == selectedListId) {
+                                        list.copy(
+                                            articles = list.articles.filterNot {
+                                                it.id == articleToDelete.id
+                                            }
+                                        )
+                                    } else {
+                                        list
+                                    }
+                                }
+                            }
+
+                        )
+                    }
+                }
+
                 // Menu principal
                 !showArticles -> {
                     CScreen(
@@ -119,6 +249,9 @@ class MainActivity : ComponentActivity() {
                         },
                         onOpenCounter = {
                             showCounter = true
+                        },
+                        onManageLists = {
+                            showManageLists = true
                         }
                     )
                 }

@@ -1,5 +1,5 @@
+
 package com.example.composableui.ui.screens
-import androidx.compose.ui.tooling.preview.Preview
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,29 +9,29 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun CScreen(
     onOpenArticles: () -> Unit,
-    onOpenCounter: () -> Unit
+    onOpenCounter: () -> Unit,
+    onManageLists: () -> Unit
 ) {
-
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-
-        Button(
-            onClick = onOpenCounter
-        ) {
+        Button(onClick = onOpenCounter) {
             Text("Contador")
         }
 
-        Button(
-            onClick = onOpenArticles
-        ) {
+        Button(onClick = onOpenArticles) {
             Text("Artigos")
+        }
+
+        Button(onClick = onManageLists) {
+            Text("Gerir listas")
         }
     }
 }
@@ -41,6 +41,7 @@ fun CScreen(
 fun CScreenPreview() {
     CScreen(
         onOpenArticles = {},
-        onOpenCounter = {}
+        onOpenCounter = {},
+        onManageLists = {}
     )
 }
