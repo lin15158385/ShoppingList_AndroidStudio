@@ -34,6 +34,19 @@ import com.example.composableui.ui.screens.CounterScreen
 import com.example.composableui.ui.screens.DetailScreen
 import com.example.composableui.ui.screens.ListEditorScreen
 import com.example.composableui.model.ManagedArticleList
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import com.example.composableui.ui.state.UiState
+import kotlinx.coroutines.CancellationException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,12 +86,53 @@ fun AppNavigation() {
         )
     }
 
+    var reloadKey by remember {
+        mutableIntStateOf(0)
+    }
+
+    var uiState by remember {
+        mutableStateOf<UiState>(UiState.Empty)
+    }
+
     var isBookmarked by rememberSaveable {
         mutableStateOf(false)
     }
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+
+    LaunchedEffect(currentRoute, selectedListId, articleLists, reloadKey) {
+        if (currentRoute == Screen.Articles.route) {
+            uiState = UiState.Loading
+
+            try {
+                val articles = articleLists
+                    .firstOrNull { it.id == selectedListId }
+                    ?.articles
+                    .orEmpty()
+
+                uiState = if (articles.isEmpty()) {
+                    UiState.Empty
+                } else {
+                    UiState.Success(articles)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                uiState = UiState.Error
+            }
+        }
+    }
+
+    LaunchedEffect(currentRoute) {
+        if (
+            currentRoute == Screen.ManageLists.route ||
+            currentRoute == Screen.Articles.route ||
+            currentRoute == Screen.Cart.route
+        ) {
+            selectedBottomRoute = currentRoute
+        }
+    }
 
     val screens = listOf(
         Screen.Home,
@@ -228,21 +282,66 @@ fun AppNavigation() {
                 )
             }
 
+
             composable(Screen.Articles.route) {
-                ArticleListScreen(
-                    articles = articleLists
-                        .firstOrNull { it.id == selectedListId }
-                        ?.articles
-                        .orEmpty(),
-                    onArticleClick = { article ->
-                        selectedArticle = article
-                        navController.navigate(Screen.ArticleDetail.route)
-                    },
-                    onAddToCart = { article ->
-                        cart = cart + article
+                when (val state = uiState) {
+                    is UiState.Loading -> {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            CircularProgressIndicator()
+                            Text(
+                                "A carregar artigos...",
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
                     }
-                )
+
+                    is UiState.Error -> {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text("Ocorreu um erro ao carregar os artigos.")
+
+                            Button(onClick = { reloadKey++ }) {
+                                Text("Tentar novamente")
+                            }
+                        }
+                    }
+
+                    is UiState.Empty -> {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text("Nenhum artigo encontrado.")
+
+                            Button(onClick = { reloadKey++ }) {
+                                Text("Tentar novamente")
+                            }
+                        }
+                    }
+
+                    is UiState.Success -> {
+                        ArticleListScreen(
+                            articles = state.articles,
+                            onArticleClick = { article ->
+                                selectedArticle = article
+                                navController.navigate(Screen.ArticleDetail.route)
+                            },
+                            onAddToCart = { article ->
+                                cart = cart + article
+                            }
+                        )
+                    }
+                }
             }
+
 
             composable(Screen.ArticleDetail.route) {
                 val article = selectedArticle
