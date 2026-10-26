@@ -11,8 +11,7 @@ import com.example.composableui.ui.components.RowArticle
 @Composable
 fun ArticleListScreen(
     articles: List<Article>,
-    onArticleClick: (Article) -> Unit,
-    onAddToCart: (Article) -> Unit
+    onArticleClick: (Article) -> Unit
 ) {
 
     LazyColumn {
@@ -25,10 +24,6 @@ fun ArticleListScreen(
                 onPreview = {
                     onArticleClick(article)
                 },
-
-                onAddToCart = {
-                    onAddToCart(article)
-                }
             )
         }
     }
@@ -40,7 +35,6 @@ fun ArticleListScreenPreview() {
     ArticleListScreen(
         articles = sampleArticles,
         onArticleClick = {},
-        onAddToCart = {}
     )
 }
 
@@ -50,6 +44,5 @@ fun ArticleListEmptyPreview() {
     ArticleListScreen(
         articles = emptyList(),
         onArticleClick = {},
-        onAddToCart = {}
     )
 }

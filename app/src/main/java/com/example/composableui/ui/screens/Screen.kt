@@ -14,24 +14,23 @@ import androidx.compose.ui.tooling.preview.Preview
 @Composable
 fun CScreen(
     onOpenArticles: () -> Unit,
-    onOpenCounter: () -> Unit,
-    onManageLists: () -> Unit
+    onOpenCounter: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Button(onClick = onOpenCounter) {
+        Button(
+            onClick = onOpenCounter
+        ) {
             Text("Contador")
         }
 
-        Button(onClick = onOpenArticles) {
+        Button(
+            onClick = onOpenArticles
+        ) {
             Text("Artigos")
-        }
-
-        Button(onClick = onManageLists) {
-            Text("Gerir listas")
         }
     }
 }
@@ -41,7 +40,6 @@ fun CScreen(
 fun CScreenPreview() {
     CScreen(
         onOpenArticles = {},
-        onOpenCounter = {},
-        onManageLists = {}
+        onOpenCounter = {}
     )
 }

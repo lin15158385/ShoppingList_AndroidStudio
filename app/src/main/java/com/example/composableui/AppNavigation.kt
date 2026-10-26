@@ -2,8 +2,12 @@
 package com.example.composableui
 
 import android.content.Intent
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
@@ -12,13 +16,17 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -26,27 +34,18 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.composableui.data.sampleArticles
 import com.example.composableui.model.Article
-import com.example.composableui.navigation.Screen
+import com.example.composableui.model.ManagedArticleList
+import com.example.composableui.navigation.NavigationScreen
 import com.example.composableui.ui.screens.ArticleListScreen
 import com.example.composableui.ui.screens.CScreen
 import com.example.composableui.ui.screens.CartScreen
 import com.example.composableui.ui.screens.CounterScreen
 import com.example.composableui.ui.screens.DetailScreen
 import com.example.composableui.ui.screens.ListEditorScreen
-import com.example.composableui.model.ManagedArticleList
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.unit.dp
 import com.example.composableui.ui.state.UiState
 import kotlinx.coroutines.CancellationException
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,8 +53,13 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
 
+    val articleViewModel: ArticleViewModel = viewModel()
+
+    val apiUiState by articleViewModel.uiState
+        .collectAsStateWithLifecycle()
+
     var selectedBottomRoute by rememberSaveable {
-        mutableStateOf(Screen.Articles.route)
+        mutableStateOf(NavigationScreen.Home.route)
     }
 
     var count by rememberSaveable {
@@ -70,17 +74,22 @@ fun AppNavigation() {
         mutableStateOf<Article?>(null)
     }
 
-    var selectedListId by rememberSaveable {
+    var selectedListId by rememberSaveable {//- Preservar selecção da bottom bar com `rememberSaveable`
         mutableStateOf(1)
     }
 
     var articleLists by remember {
-        mutableStateOf(
+        mutableStateOf(//Manualmente a adicionar , da trabalho a implementar
             listOf(
                 ManagedArticleList(
                     id = 1,
                     name = "Lista 1",
                     articles = sampleArticles
+                ),
+                ManagedArticleList(
+                    id = 2,
+                    name = "Produtos da API",
+                    articles = emptyList()
                 )
             )
         )
@@ -101,20 +110,39 @@ fun AppNavigation() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
-    LaunchedEffect(currentRoute, selectedListId, articleLists, reloadKey) {
-        if (currentRoute == Screen.Articles.route) {
-            uiState = UiState.Loading
 
+    LaunchedEffect(
+        currentRoute,
+        selectedListId,
+        articleLists,
+        reloadKey,
+        apiUiState
+    ) {
+        if (currentRoute == NavigationScreen.Articles.route) {
             try {
                 val articles = articleLists
                     .firstOrNull { it.id == selectedListId }
                     ?.articles
                     .orEmpty()
 
-                uiState = if (articles.isEmpty()) {
-                    UiState.Empty
-                } else {
-                    UiState.Success(articles)
+                uiState = when {
+                    articles.isNotEmpty() -> {
+                        UiState.Success(articles)
+                    }
+
+                    selectedListId == 2 &&
+                            apiUiState is UiState.Loading -> {
+                        UiState.Loading
+                    }
+
+                    selectedListId == 2 &&
+                            apiUiState is UiState.Error -> {
+                        UiState.Error
+                    }
+
+                    else -> {
+                        UiState.Empty
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -124,38 +152,54 @@ fun AppNavigation() {
         }
     }
 
+
+    LaunchedEffect(apiUiState) {
+        if (apiUiState is UiState.Success) {
+            val apiArticles =
+                (apiUiState as UiState.Success).articles
+
+            articleLists = articleLists.map { list ->
+                if (list.id == 2) {
+                    list.copy(articles = apiArticles)
+                } else {
+                    list
+                }
+            }
+        }
+    }
+
     LaunchedEffect(currentRoute) {
         if (
-            currentRoute == Screen.ManageLists.route ||
-            currentRoute == Screen.Articles.route ||
-            currentRoute == Screen.Cart.route
+            currentRoute == NavigationScreen.ManageLists.route ||
+            currentRoute == NavigationScreen.Articles.route ||
+            currentRoute == NavigationScreen.Cart.route
         ) {
             selectedBottomRoute = currentRoute
         }
     }
 
-    val screens = listOf(
-        Screen.Home,
-        Screen.Articles,
-        Screen.ManageLists,
-        Screen.ListEditor,
-        Screen.ArticleDetail,
-        Screen.Counter,
-        Screen.Cart
+    val navigationScreens = listOf(
+        NavigationScreen.Home,
+        NavigationScreen.Articles,
+        NavigationScreen.ManageLists,
+        NavigationScreen.ListEditor,
+        NavigationScreen.ArticleDetail,
+        NavigationScreen.Counter,
+        NavigationScreen.Cart
     )
 
-    val currentScreen = screens.firstOrNull {
+    val currentNavigationScreen = navigationScreens.firstOrNull {
         it.route == currentRoute
-    } ?: Screen.Home
+    } ?: NavigationScreen.Home
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(currentScreen.title)
+                    Text(currentNavigationScreen.title)
                 },
                 navigationIcon = {
-                    if (!currentScreen.isBaseScreen) {
+                    if (!currentNavigationScreen.isBaseScreen) {
                         IconButton(
                             onClick = {
                                 navController.popBackStack()
@@ -196,16 +240,16 @@ fun AppNavigation() {
         },
         bottomBar = {
             if (
-                currentScreen.isBaseScreen &&
-                currentRoute != Screen.Home.route
+                currentNavigationScreen.isBaseScreen &&
+                currentRoute != NavigationScreen.Home.route
             ) {
                 NavigationBar {
                     NavigationBarItem(
                         selected = selectedBottomRoute ==
-                                Screen.ManageLists.route,
+                                NavigationScreen.ManageLists.route,
                         onClick = {
-                            selectedBottomRoute = Screen.ManageLists.route
-                            navController.navigate(Screen.ManageLists.route) {
+                            selectedBottomRoute = NavigationScreen.ManageLists.route
+                            navController.navigate(NavigationScreen.ManageLists.route) {
                                 popUpTo(
                                     navController.graph.findStartDestination().id
                                 ) {
@@ -221,10 +265,10 @@ fun AppNavigation() {
 
                     NavigationBarItem(
                         selected = selectedBottomRoute ==
-                                Screen.Articles.route,
+                                NavigationScreen.Articles.route,
                         onClick = {
-                            selectedBottomRoute = Screen.Articles.route
-                            navController.navigate(Screen.Articles.route) {
+                            selectedBottomRoute = NavigationScreen.Articles.route
+                            navController.navigate(NavigationScreen.Articles.route) {
                                 popUpTo(
                                     navController.graph.findStartDestination().id
                                 ) {
@@ -240,10 +284,10 @@ fun AppNavigation() {
 
                     NavigationBarItem(
                         selected = selectedBottomRoute ==
-                                Screen.Cart.route,
+                                NavigationScreen.Cart.route,
                         onClick = {
-                            selectedBottomRoute = Screen.Cart.route
-                            navController.navigate(Screen.Cart.route) {
+                            selectedBottomRoute = NavigationScreen.Cart.route
+                            navController.navigate(NavigationScreen.Cart.route) {
                                 popUpTo(
                                     navController.graph.findStartDestination().id
                                 ) {
@@ -259,32 +303,31 @@ fun AppNavigation() {
                 }
             }
         }
-    ) { innerPadding ->
+    )
+    { innerPadding ->
 
         NavHost(
             navController = navController,
-            startDestination = Screen.Home.route,
+            startDestination = NavigationScreen.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Home.route) {
+            composable(NavigationScreen.Home.route) {
                 CScreen(
                     onOpenArticles = {
-                        selectedBottomRoute = Screen.Articles.route
-                        navController.navigate(Screen.Articles.route)
+                        selectedBottomRoute = NavigationScreen.ManageLists.route
+                        navController.navigate(NavigationScreen.ManageLists.route)
                     },
                     onOpenCounter = {
-                        navController.navigate(Screen.Counter.route)
-                    },
-                    onManageLists = {
-                        selectedBottomRoute = Screen.ManageLists.route
-                        navController.navigate(Screen.ManageLists.route)
+                        navController.navigate(NavigationScreen.Counter.route)
                     }
                 )
             }
 
 
-            composable(Screen.Articles.route) {
+            composable(NavigationScreen.Articles.route) {
+
                 when (val state = uiState) {
+
                     is UiState.Loading -> {
                         Column(
                             modifier = Modifier.fillMaxSize(),
@@ -293,7 +336,7 @@ fun AppNavigation() {
                         ) {
                             CircularProgressIndicator()
                             Text(
-                                "A carregar artigos...",
+                                "A carregar produto...",
                                 modifier = Modifier.padding(16.dp)
                             )
                         }
@@ -305,9 +348,13 @@ fun AppNavigation() {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Text("Ocorreu um erro ao carregar os artigos.")
+                            Text("Não foi possível carregar o produto.")
 
-                            Button(onClick = { reloadKey++ }) {
+                            Button(
+                                onClick = {
+                                    articleViewModel.loadProducts()
+                                }
+                            ) {
                                 Text("Tentar novamente")
                             }
                         }
@@ -319,9 +366,13 @@ fun AppNavigation() {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Text("Nenhum artigo encontrado.")
+                            Text("Nenhum produto encontrado.")
 
-                            Button(onClick = { reloadKey++ }) {
+                            Button(
+                                onClick = {
+                                    articleViewModel.loadProducts()
+                                }
+                            ) {
                                 Text("Tentar novamente")
                             }
                         }
@@ -332,18 +383,18 @@ fun AppNavigation() {
                             articles = state.articles,
                             onArticleClick = { article ->
                                 selectedArticle = article
-                                navController.navigate(Screen.ArticleDetail.route)
-                            },
-                            onAddToCart = { article ->
-                                cart = cart + article
+                                navController.navigate(
+                                    NavigationScreen.ArticleDetail.route
+                                )
                             }
                         )
                     }
                 }
+
             }
 
 
-            composable(Screen.ArticleDetail.route) {
+            composable(NavigationScreen.ArticleDetail.route) {
                 val article = selectedArticle
 
                 if (article != null) {
@@ -364,26 +415,35 @@ fun AppNavigation() {
                 }
             }
 
-            composable(Screen.ManageLists.route) {
-                androidx.compose.foundation.layout.Column {
+
+            composable(NavigationScreen.ManageLists.route) {
+                Column {
                     articleLists.forEach { list ->
                         Text("${list.name} (ID: ${list.id})")
 
                         Button(
                             onClick = {
                                 selectedListId = list.id
-                                navController.navigate(
-                                    Screen.ListEditor.route
-                                )
+                                navController.navigate(NavigationScreen.Articles.route)
                             }
                         ) {
-                            Text("Abrir lista")
+                            Text("Ver artigos")
+                        }
+
+                        Button(
+                            onClick = {
+                                selectedListId = list.id
+                                navController.navigate(NavigationScreen.ListEditor.route)
+                            }
+                        ) {
+                            Text("Editar lista")
                         }
                     }
                 }
             }
 
-            composable(Screen.ListEditor.route) {
+
+            composable(NavigationScreen.ListEditor.route) {
                 val currentList = articleLists.firstOrNull {
                     it.id == selectedListId
                 }
@@ -439,7 +499,7 @@ fun AppNavigation() {
                 }
             }
 
-            composable(Screen.Counter.route) {
+            composable(NavigationScreen.Counter.route) {
                 CounterScreen(
                     count = count,
                     onIncrement = {
@@ -451,12 +511,12 @@ fun AppNavigation() {
                 )
             }
 
-            composable(Screen.Cart.route) {
+            composable(NavigationScreen.Cart.route) {
                 CartScreen(
                     cart = cart,
                     onPreview = { article ->
                         selectedArticle = article
-                        navController.navigate(Screen.ArticleDetail.route)
+                        navController.navigate(NavigationScreen.ArticleDetail.route)
                     },
                     onRemove = { article ->
                         cart = cart - article

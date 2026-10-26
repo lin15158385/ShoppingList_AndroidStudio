@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.composableui.data.sampleArticles
 import com.example.composableui.model.Article
 
 @Composable
@@ -44,12 +45,7 @@ fun DetailScreen(
 @Composable
 fun DetailScreenPreview() {
     DetailScreen(
-        article = com.example.composableui.model.Article(
-            id = 1,
-            title = "Big Mac",
-            type = "Beef/Carne de Vaca",
-            content = "Big Mac"
-        ),
+        article = sampleArticles.first(),
         onBack = {}
     )
 }

@@ -12,7 +12,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.composableui.data.sampleArticles
 import com.example.composableui.model.Article
 import com.example.composableui.model.ManagedArticleList
 
@@ -167,6 +169,7 @@ fun ListEditorScreen(
                         }
 
                         showDialog = false
+                        onBack()
                     }
                 ) {
                     Text("Guardar")
@@ -221,4 +224,22 @@ fun ListEditorScreen(
             }
         )
     }
+}
+
+@Preview(showBackground = true, name = "Editar lista")
+@Composable
+fun ListEditorScreenPreview() {
+    val previewList = ManagedArticleList(
+        id = 1,
+        name = "Lista de exemplo",
+        articles = sampleArticles
+    )
+
+    ListEditorScreen(
+        articleList = previewList,
+        onBack = {},
+        onAddArticle = {},
+        onUpdateArticle = {},
+        onDeleteArticle = {}
+    )
 }
