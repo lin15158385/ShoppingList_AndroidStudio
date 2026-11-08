@@ -1,4 +1,3 @@
-
 package com.example.composableui.data
 
 import com.example.composableui.model.Article
@@ -15,7 +14,7 @@ class ArticleRepository {
     private val client = OkHttpClient()
 
     private val apiUrl =
-        "https://world.openfoodfacts.org/cgi/search.pl?action=process&json=true&page_size=20&fields=product_name,categories,ingredients_text,code"
+        "https://world.openfoodfacts.org/cgi/search.pl?action=process&json=true&page_size=20&fields=product_name,categories,ingredients_text,code,image_url"
 
     fun fetchProducts(callback: (Result<List<Article>>) -> Unit) {
         val request = Request.Builder()
@@ -52,6 +51,14 @@ class ArticleRepository {
                             val title = product.optString("product_name")
                             if (title.isBlank() || title == "null") continue
 
+                            // Ler o URL da imagem
+                            val imageUrl = product.optString("image_url")
+                                .takeIf {
+                                    it.isNotBlank() &&
+                                            it != "null" &&
+                                            it.startsWith("http")
+                                }
+
                             articles.add(
                                 Article(
                                     id = product.optString("code")
@@ -60,12 +67,14 @@ class ArticleRepository {
                                     type = product.optString("categories")
                                         .ifBlank { "Categoria desconhecida" },
                                     content = product.optString("ingredients_text")
-                                        .ifBlank { "Ingredientes não disponíveis" }
+                                        .ifBlank { "Ingredientes não disponíveis" },
+                                    imageUrl = imageUrl
                                 )
                             )
                         }
 
                         callback(Result.success(articles))
+
                     } catch (e: Exception) {
                         callback(Result.failure(e))
                     }

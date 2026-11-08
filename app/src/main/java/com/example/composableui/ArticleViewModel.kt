@@ -6,6 +6,7 @@ import com.example.composableui.ui.state.UiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import androidx.lifecycle.ViewModelProvider
 
 class ArticleViewModel(
     private val repository: ArticleRepository = ArticleRepository()
@@ -38,5 +39,18 @@ class ArticleViewModel(
                 }
             )
         }
+    }
+}
+
+class ArticleViewModelFactory : ViewModelProvider.Factory {
+
+    override fun <T : ViewModel> create(
+        modelClass: Class<T>
+    ): T {
+        if (modelClass.isAssignableFrom(ArticleViewModel::class.java)) {
+            return ArticleViewModel() as T
+        }
+
+        throw IllegalArgumentException("ViewModel desconhecido")
     }
 }

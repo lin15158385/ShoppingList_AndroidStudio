@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -53,7 +54,9 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    val articleViewModel: ArticleViewModel = viewModel()
+    val articleViewModel: ArticleViewModel = viewModel(
+        factory = ArticleViewModelFactory()
+    )
 
     val apiUiState by articleViewModel.uiState
         .collectAsStateWithLifecycle()
@@ -169,12 +172,13 @@ fun AppNavigation() {
     }
 
     LaunchedEffect(currentRoute) {
-        if (
-            currentRoute == NavigationScreen.ManageLists.route ||
-            currentRoute == NavigationScreen.Articles.route ||
-            currentRoute == NavigationScreen.Cart.route
-        ) {
-            selectedBottomRoute = currentRoute
+        selectedBottomRoute = when (currentRoute) {
+            NavigationScreen.ManageLists.route,
+            NavigationScreen.Articles.route -> NavigationScreen.Articles.route
+
+            NavigationScreen.Cart.route -> NavigationScreen.Cart.route
+
+            else -> NavigationScreen.Home.route
         }
     }
 
@@ -244,34 +248,14 @@ fun AppNavigation() {
                 currentRoute != NavigationScreen.Home.route
             ) {
                 NavigationBar {
-                    NavigationBarItem(
-                        selected = selectedBottomRoute ==
-                                NavigationScreen.ManageLists.route,
-                        onClick = {
-                            selectedBottomRoute = NavigationScreen.ManageLists.route
-                            navController.navigate(NavigationScreen.ManageLists.route) {
-                                popUpTo(
-                                    navController.graph.findStartDestination().id
-                                ) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = { Text("☷") },
-                        label = { Text("Listas") }
-                    )
 
                     NavigationBarItem(
-                        selected = selectedBottomRoute ==
-                                NavigationScreen.Articles.route,
+                        selected = selectedBottomRoute == NavigationScreen.Articles.route,
                         onClick = {
                             selectedBottomRoute = NavigationScreen.Articles.route
-                            navController.navigate(NavigationScreen.Articles.route) {
-                                popUpTo(
-                                    navController.graph.findStartDestination().id
-                                ) {
+
+                            navController.navigate(NavigationScreen.ManageLists.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
                                 }
                                 launchSingleTop = true
@@ -283,14 +267,12 @@ fun AppNavigation() {
                     )
 
                     NavigationBarItem(
-                        selected = selectedBottomRoute ==
-                                NavigationScreen.Cart.route,
+                        selected = selectedBottomRoute == NavigationScreen.Cart.route,
                         onClick = {
                             selectedBottomRoute = NavigationScreen.Cart.route
+
                             navController.navigate(NavigationScreen.Cart.route) {
-                                popUpTo(
-                                    navController.graph.findStartDestination().id
-                                ) {
+                                popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
                                 }
                                 launchSingleTop = true
@@ -299,6 +281,21 @@ fun AppNavigation() {
                         },
                         icon = { Text("🛒") },
                         label = { Text("Carrinho") }
+                    )
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = {
+                            selectedBottomRoute = NavigationScreen.Home.route
+
+                            navController.navigate(NavigationScreen.Home.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    inclusive = false
+                                }
+                                launchSingleTop = true
+                            }
+                        },
+                        icon = { Text("⌂") },
+                        label = { Text("Menu") }
                     )
                 }
             }
@@ -314,7 +311,7 @@ fun AppNavigation() {
             composable(NavigationScreen.Home.route) {
                 CScreen(
                     onOpenArticles = {
-                        selectedBottomRoute = NavigationScreen.ManageLists.route
+                        selectedBottomRoute = NavigationScreen.Articles.route
                         navController.navigate(NavigationScreen.ManageLists.route)
                     },
                     onOpenCounter = {
@@ -383,9 +380,12 @@ fun AppNavigation() {
                             articles = state.articles,
                             onArticleClick = { article ->
                                 selectedArticle = article
-                                navController.navigate(
-                                    NavigationScreen.ArticleDetail.route
-                                )
+                                navController.navigate(NavigationScreen.ArticleDetail.route)
+                            },
+                            onAddToCart = { article ->
+                                if (article !in cart) {
+                                    cart = cart + article
+                                }
                             }
                         )
                     }
@@ -399,10 +399,7 @@ fun AppNavigation() {
 
                 if (article != null) {
                     DetailScreen(
-                        article = article,
-                        onBack = {
-                            navController.popBackStack()
-                        }
+                        article = article
                     )
                 } else {
                     Button(
@@ -417,26 +414,27 @@ fun AppNavigation() {
 
 
             composable(NavigationScreen.ManageLists.route) {
-                Column {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text("Selecionar lista")
+
                     articleLists.forEach { list ->
-                        Text("${list.name} (ID: ${list.id})")
-
                         Button(
                             onClick = {
                                 selectedListId = list.id
-                                navController.navigate(NavigationScreen.Articles.route)
-                            }
-                        ) {
-                            Text("Ver artigos")
-                        }
 
-                        Button(
-                            onClick = {
-                                selectedListId = list.id
-                                navController.navigate(NavigationScreen.ListEditor.route)
-                            }
+                                navController.navigate(NavigationScreen.Articles.route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Editar lista")
+                            Text(list.name)
                         }
                     }
                 }
