@@ -1,12 +1,9 @@
-// CartScreen.kt
 package com.example.composableui.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -19,47 +16,56 @@ fun CartScreen(
     onPreview: (Article) -> Unit,
     onRemove: (Article) -> Unit
 ) {
-
-    LazyColumn {
-
-        items(cart) { article ->
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
-            ) {
-
-                Column(
-                    modifier = Modifier.padding(16.dp)
+    if (cart.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = androidx.compose.ui.Alignment.Center
+        ) {
+            Text("O carrinho está vazio.")
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(
+                items = cart,
+                key = { it.id }
+            ) { article ->
+                Card(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-
-                    Text(article.title)
-
-                    Spacer(
-                        modifier = Modifier.height(8.dp)
-                    )
-
-                    Row {
-
-                        Button(
-                            onClick = {
-                                onPreview(article)
-                            }
-                        ) {
-                            Text("Preview")
-                        }
-
-                        Spacer(
-                            modifier = Modifier.width(8.dp)
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = article.title,
+                            style = MaterialTheme.typography.titleMedium
                         )
 
-                        Button(
-                            onClick = {
-                                onRemove(article)
-                            }
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text("Tipo: ${article.type}")
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("Remover")
+                            Button(
+                                onClick = { onPreview(article) }
+                            ) {
+                                Text("Ver detalhes")
+                            }
+
+                            Button(
+                                onClick = { onRemove(article) }
+                            ) {
+                                Text("Remover")
+                            }
                         }
                     }
                 }
@@ -68,36 +74,41 @@ fun CartScreen(
     }
 }
 
-
-@Preview(showBackground = true, name = "Cesto com artigos")
+@Preview(showBackground = true, name = "Carrinho com artigos")
 @Composable
 fun CartScreenPreview() {
-    CartScreen(
-        cart = listOf(
-            com.example.composableui.model.Article(
-                id = 1,
-                title = "Big Mac",
-                type = "Beef/Carne de Vaca",
-                content = "Big Mac"
-            ),
-            com.example.composableui.model.Article(
-                id = 2,
-                title = "McChicken",
-                type = "Chicken/Frango",
-                content = "McChicken"
-            )
+    val previewCart = listOf(
+        Article(
+            id = 1,
+            title = "Big Mac",
+            type = "Beef/Carne de Vaca",
+            content = "Big Mac"
         ),
-        onPreview = {},
-        onRemove = {}
+        Article(
+            id = 2,
+            title = "McChicken",
+            type = "Chicken/Frango",
+            content = "McChicken"
+        )
     )
+
+    MaterialTheme {
+        CartScreen(
+            cart = previewCart,
+            onPreview = {},
+            onRemove = {}
+        )
+    }
 }
 
-@Preview(showBackground = true, name = "Cesto vazio")
+@Preview(showBackground = true, name = "Carrinho vazio")
 @Composable
 fun CartScreenEmptyPreview() {
-    CartScreen(
-        cart = emptyList(),
-        onPreview = {},
-        onRemove = {}
-    )
+    MaterialTheme {
+        CartScreen(
+            cart = emptyList(),
+            onPreview = {},
+            onRemove = {}
+        )
+    }
 }

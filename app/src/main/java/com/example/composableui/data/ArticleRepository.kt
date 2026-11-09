@@ -51,28 +51,7 @@ class ArticleRepository {
                             val title = product.optString("product_name")
                             if (title.isBlank() || title == "null") continue
 
-                            // Ler o URL da imagem
-                            val imageUrl = product.optString("image_url")
-                                .takeIf {
-                                    it.isNotBlank() &&
-                                            it != "null" &&
-                                            it.startsWith("http")
-                                }
-
-                            articles.add(
-                                Article(
-                                    id = product.optString("code")
-                                        .toIntOrNull() ?: (i + 1),
-                                    //?.	Executa uma operação apenas se o objeto não for null.
-                                    //?:	Se o valor for null, utiliza uma alternativa.
-                                    title = title,
-                                    type = product.optString("categories")
-                                        .ifBlank { "Categoria desconhecida" },
-                                    content = product.optString("ingredients_text")
-                                        .ifBlank { "Ingredientes não disponíveis" },
-                                    imageUrl = imageUrl
-                                )
-                            )
+                            articles.add(Article.fromJson(product, i))
                         }
 
                         callback(Result.success(articles))

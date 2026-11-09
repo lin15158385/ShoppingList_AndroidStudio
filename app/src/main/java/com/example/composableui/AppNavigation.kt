@@ -42,11 +42,12 @@ import com.example.composableui.ui.screens.CScreen
 import com.example.composableui.ui.screens.CartScreen
 import com.example.composableui.ui.screens.CounterScreen
 import com.example.composableui.ui.screens.DetailScreen
-import com.example.composableui.ui.screens.ListEditorScreen
 import com.example.composableui.ui.state.UiState
 import kotlinx.coroutines.CancellationException
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.composableui.ui.components.MyTopBar
+import com.example.composableui.ui.components.MyBottomBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -204,21 +205,10 @@ fun AppNavigation(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(currentNavigationScreen.title)
-                },
-                navigationIcon = {
-                    if (!currentNavigationScreen.isBaseScreen) {
-                        IconButton(
-                            onClick = {
-                                navController.popBackStack()
-                            }
-                        ) {
-                            Text("←")
-                        }
-                    }
-                },
+            MyTopBar(
+                title = currentNavigationScreen.title,
+                navController = navController,
+                isBaseScreen = currentNavigationScreen.isBaseScreen,
                 actions = {
                     IconButton(
                         onClick = {
@@ -253,57 +243,52 @@ fun AppNavigation(
                 currentNavigationScreen.isBaseScreen &&
                 currentRoute != NavigationScreen.Home.route
             ) {
-                NavigationBar {
+                MyBottomBar(
+                    selectedRoute = selectedBottomRoute,
+                    onNavigate = { route ->
 
-                    NavigationBarItem(
-                        selected = selectedBottomRoute == NavigationScreen.Articles.route,
-                        onClick = {
-                            selectedBottomRoute = NavigationScreen.Articles.route
+                        selectedBottomRoute = route
 
-                            navController.navigate(NavigationScreen.ManageLists.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                        when (route) {
+                            NavigationScreen.Articles.route -> {
+                                navController.navigate(
+                                    NavigationScreen.ManageLists.route
+                                ) {
+                                    popUpTo(
+                                        navController.graph.findStartDestination().id
+                                    ) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
-                        },
-                        icon = { Text("▤") },
-                        label = { Text("Artigos") }
-                    )
 
-                    NavigationBarItem(
-                        selected = selectedBottomRoute == NavigationScreen.Cart.route,
-                        onClick = {
-                            selectedBottomRoute = NavigationScreen.Cart.route
-
-                            navController.navigate(NavigationScreen.Cart.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                            NavigationScreen.Cart.route -> {
+                                navController.navigate(route) {
+                                    popUpTo(
+                                        navController.graph.findStartDestination().id
+                                    ) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
-                        },
-                        icon = { Text("🛒") },
-                        label = { Text("Carrinho") }
-                    )
-                    NavigationBarItem(
-                        selected = false,
-                        onClick = {
-                            selectedBottomRoute = NavigationScreen.Home.route
 
-                            navController.navigate(NavigationScreen.Home.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    inclusive = false
+                            NavigationScreen.Home.route -> {
+                                navController.navigate(route) {
+                                    popUpTo(
+                                        navController.graph.findStartDestination().id
+                                    ) {
+                                        inclusive = false
+                                    }
+                                    launchSingleTop = true
                                 }
-                                launchSingleTop = true
                             }
-                        },
-                        icon = { Text("⌂") },
-                        label = { Text("Menu") }
-                    )
-                }
+                        }
+                    }
+                )
             }
         }
     )
@@ -446,62 +431,6 @@ fun AppNavigation(
                 }
             }
 
-
-            composable(NavigationScreen.ListEditor.route) {
-                val currentList = articleLists.firstOrNull {
-                    it.id == selectedListId
-                }
-
-                if (currentList != null) {
-                    ListEditorScreen(
-                        articleList = currentList,
-                        onBack = {
-                            navController.popBackStack()
-                        },
-                        onAddArticle = { article ->
-                            articleLists = articleLists.map { list ->
-                                if (list.id == selectedListId) {
-                                    list.copy(
-                                        articles = list.articles + article
-                                    )
-                                } else {
-                                    list
-                                }
-                            }
-                        },
-                        onUpdateArticle = { updatedArticle ->
-                            articleLists = articleLists.map { list ->
-                                if (list.id == selectedListId) {
-                                    list.copy(
-                                        articles = list.articles.map { article ->
-                                            if (article.id == updatedArticle.id) {
-                                                updatedArticle
-                                            } else {
-                                                article
-                                            }
-                                        }
-                                    )
-                                } else {
-                                    list
-                                }
-                            }
-                        },
-                        onDeleteArticle = { articleToDelete ->
-                            articleLists = articleLists.map { list ->
-                                if (list.id == selectedListId) {
-                                    list.copy(
-                                        articles = list.articles.filterNot {
-                                            it.id == articleToDelete.id
-                                        }
-                                    )
-                                } else {
-                                    list
-                                }
-                            }
-                        }
-                    )
-                }
-            }
 
             composable(NavigationScreen.Counter.route) {
                 CounterScreen(
