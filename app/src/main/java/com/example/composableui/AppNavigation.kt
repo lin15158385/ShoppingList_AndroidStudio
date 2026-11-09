@@ -50,16 +50,22 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppNavigation() {
+fun AppNavigation(
+    isPreview: Boolean = false
+) {
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    val articleViewModel: ArticleViewModel = viewModel(
-        factory = ArticleViewModelFactory()
-    )
+    val articleViewModel: ArticleViewModel? =
+        if (!isPreview) {
+            viewModel(factory = ArticleViewModelFactory())
+        } else {
+            null
+        }
 
-    val apiUiState by articleViewModel.uiState
-        .collectAsStateWithLifecycle()
+    val apiUiState =
+        articleViewModel?.uiState?.collectAsStateWithLifecycle()?.value
+            ?: UiState.Empty
 
     var selectedBottomRoute by rememberSaveable {
         mutableStateOf(NavigationScreen.Home.route)
@@ -349,7 +355,7 @@ fun AppNavigation() {
 
                             Button(
                                 onClick = {
-                                    articleViewModel.loadProducts()
+                                    articleViewModel?.loadProducts()
                                 }
                             ) {
                                 Text("Tentar novamente")
@@ -367,7 +373,7 @@ fun AppNavigation() {
 
                             Button(
                                 onClick = {
-                                    articleViewModel.loadProducts()
+                                    articleViewModel?.loadProducts()
                                 }
                             ) {
                                 Text("Tentar novamente")

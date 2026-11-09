@@ -63,6 +63,8 @@ class ArticleRepository {
                                 Article(
                                     id = product.optString("code")
                                         .toIntOrNull() ?: (i + 1),
+                                    //?.	Executa uma operação apenas se o objeto não for null.
+                                    //?:	Se o valor for null, utiliza uma alternativa.
                                     title = title,
                                     type = product.optString("categories")
                                         .ifBlank { "Categoria desconhecida" },
